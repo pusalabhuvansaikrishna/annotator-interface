@@ -233,9 +233,11 @@ async function renderPdfPageToCanvas(
   canvas.width  = Math.floor(scaled.width);
   canvas.height = Math.floor(scaled.height);
 
+  // ── FIX: pdfjs-dist v4+ requires the `canvas` property in RenderParameters ──
   await page.render({
     canvasContext: canvas.getContext("2d")!,
     viewport:      scaled,
+    canvas:        canvas,
   }).promise;
 
   return { canvas, nativeW, nativeH, pixelW: canvas.width, pixelH: canvas.height };
