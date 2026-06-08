@@ -1,0 +1,870 @@
+/* ===== Task Detail Page ===== */
+
+/* ── CSS custom properties ── */
+:root {
+  --brand:         #3A2C08;
+  --brand-hover:   #5c470d;
+  --brand-light:   #faf7f0;
+  --brand-border:  #e8dfc8;
+  --text-primary:  #1e293b;
+  --text-secondary:#334155;
+  --text-muted:    #94a3b8;
+  --border:        #e3e6ef;
+  --bg-page:       #f8fafc;
+  --radius-md:     12px;
+  --radius-sm:     8px;
+  --shadow-card:   0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100dvh;
+  overflow: hidden;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  box-sizing: border-box;
+  padding: 0.75rem 1rem;
+  background: var(--bg-page);
+}
+
+/* ── Top action row: back + save ── */
+.topActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 0.5rem;
+  min-height: 36px;
+}
+
+.topActionRight {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+}
+
+.backBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brand);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.backBtn:hover { opacity: 1; }
+
+/* Hide text on very small screens, keep icon */
+@media (max-width: 380px) {
+  .backBtnText { display: none; }
+}
+
+.saveMsgOk,
+.saveMsgErr {
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.saveMsgOk  { color: #16a34a; }
+.saveMsgErr { color: #dc2626; }
+
+/* Hide message text on tiny screens */
+@media (max-width: 480px) {
+  .saveMsgOk,
+  .saveMsgErr { display: none; }
+}
+
+.saveBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1.1rem;
+  background: var(--brand);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.saveBtn:hover:not(:disabled) { background: var(--brand-hover); }
+.saveBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (max-width: 380px) {
+  .saveBtn { padding: 0.45rem 0.75rem; }
+  .saveBtnText { display: none; }
+}
+
+.btnSpinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── Loading / error states ── */
+.stateWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex: 1;
+  color: var(--text-muted);
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(58, 44, 8, 0.15);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.errorIcon { font-size: 2rem; color: #fca5a5; }
+.errorText { color: #b91c1c; font-size: 0.9rem; margin: 0; text-align: center; }
+
+.retryBtn {
+  padding: 0.4rem 1.2rem;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.retryBtn:hover { background: var(--brand-hover); }
+
+/* ── Content wrapper ── */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Top info row — three boxes ── */
+.topRow {
+  display: grid;
+  grid-template-columns: 220px 1fr 2fr;
+  align-items: stretch;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Tablet: stack user-reason + annotator side by side, lang/status full width */
+@media (max-width: 1024px) {
+  .topRow {
+    grid-template-columns: 1fr 1fr;
+  }
+  /* First box (lang/status/priority) spans full width */
+  .topRow > .infoBox:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Mobile: all boxes stacked */
+@media (max-width: 600px) {
+  .topRow {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    /* Allow the info row to scroll on mobile if content is tall */
+    max-height: 42dvh;
+  }
+  .topRow > .infoBox:first-child {
+    grid-column: auto;
+  }
+}
+
+/* ── Info boxes ── */
+.infoBox {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  box-shadow: var(--shadow-card);
+  min-width: 0; /* prevent grid blowout */
+}
+
+.infoBoxEditable {
+  gap: 0.5rem;
+}
+
+.infoLabel {
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+}
+
+.infoLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.infoValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.reasonText {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* ── Language row ── */
+.langRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.langIconWrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--brand-light);
+  border: 1px solid var(--brand-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+
+.langText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 0.1rem 0;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+/* ── Status + Priority side by side ── */
+.statusPriorityRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+
+/* ── Status select ── */
+.statusSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0.45rem 2rem 0.45rem 0.75rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brand);
+  background: var(--brand-light) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%233A2C08' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 0.65rem center;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: auto;
+  min-width: 110px;
+  max-width: 100%;
+}
+.statusSelect:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(58, 44, 8, 0.1);
+}
+.statusSelect:disabled { opacity: 0.6; cursor: not-allowed; }
+.statusSelectPlaceholder { color: var(--text-muted); }
+
+/* ── Priority badges ── */
+.priorityBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 20px;
+  padding: 0.25rem 0.75rem;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.priorityLow      { color: var(--brand); background: #fdf5e4; border: 1px solid var(--brand-border); }
+.priorityMedium   { color: #92400e;      background: #fef3c7; border: 1px solid #fde68a; }
+.priorityHigh     { color: #7c2d12;      background: #fee2e2; border: 1px solid #fecaca; }
+.priorityCritical { color: #fff;         background: var(--brand); border: 1px solid var(--brand); }
+
+/* ── Annotator remarks textarea ── */
+.charCount {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.charCountWarn { color: #b91c1c; }
+
+.textareaWrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+}
+
+.remarkTextarea {
+  flex: 1;
+  box-sizing: border-box;
+  padding: 0.65rem 0.8rem 2.2rem 0.8rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  resize: vertical;
+  outline: none;
+  line-height: 1.55;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-height: 70px;
+  width: 100%;
+}
+.remarkTextarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(58, 44, 8, 0.1);
+}
+.remarkTextarea::placeholder { color: var(--text-muted); }
+
+.remarkTickBtn {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  transition: background 0.15s, opacity 0.15s;
+}
+.remarkTickBtn:hover:not(:disabled) { background: var(--brand-hover); }
+.remarkTickBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Inline field-level feedback ── */
+.fieldMsgOk {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #15803d;
+  margin-top: 0.2rem;
+}
+.fieldMsgErr {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #b91c1c;
+  margin-top: 0.2rem;
+}
+
+.inlineSpinner {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 2px solid #94a3b8;
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+/* ── Viewer row: OCR canvas left · JSON panel right ── */
+.viewerRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+/* On tablet/mobile: stack vertically, each panel scrollable */
+@media (max-width: 900px) {
+  .viewerRow {
+    grid-template-columns: 1fr;
+    /* KEY FIX: allow the row itself to scroll so both panels are reachable */
+    overflow-y: auto;
+    flex: none;
+    /* Give the row a sensible max so it doesn't push the page taller than
+       the viewport; users scroll inside the row to reach the JSON panel */
+    max-height: calc(100dvh - 220px);
+    min-height: 0;
+  }
+}
+
+/* ── Viewer box ── */
+.viewerBox {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  min-height: 0;
+}
+
+/* On desktop, OCR viewer must fill all available height */
+@media (min-width: 901px) {
+  .viewerBox {
+    height: 100%;
+  }
+}
+
+/* ── FIX: OCR viewer box on mobile gets a fixed height + scroll ──
+   This is the core change: the Konva canvas container becomes
+   scrollable so users can pan through the document on small screens. */
+@media (max-width: 900px) {
+  .viewerBox {
+    /* Give it a tall but bounded height so it doesn't overflow the page */
+    height: 60dvh;
+    min-height: 320px;
+    flex-shrink: 0;
+  }
+
+  /* The content area (where Konva renders) must scroll when the canvas
+     is larger than its container */
+  .viewerBox .viewerContent {
+    overflow: auto;        /* enables both X and Y scrolling */
+    -webkit-overflow-scrolling: touch; /* smooth momentum on iOS */
+    cursor: grab;
+  }
+
+  .viewerBox .viewerContent:active {
+    cursor: grabbing;
+  }
+}
+
+/* JSON panel on mobile: takes natural height (collapsed/expanded) */
+.jsonViewerBox {
+  flex-shrink: 0; /* Don't squeeze on mobile stacked layout */
+}
+
+@media (min-width: 901px) {
+  .jsonViewerBox {
+    flex-shrink: 1;
+  }
+}
+
+/* ── Generic viewer panel header ── */
+.viewerHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--brand-light);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+.viewerHeader i { font-size: 1rem; }
+
+.openLink {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand);
+  text-decoration: none;
+  opacity: 0.65;
+  transition: opacity 0.15s;
+}
+.openLink:hover { opacity: 1; }
+
+.viewerContent {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+.iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  min-height: 420px;
+  display: block;
+}
+
+.viewerEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 280px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 2rem;
+  text-align: center;
+}
+.viewerEmpty i { font-size: 2.5rem; color: #cbd5e1; }
+
+.viewerState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 280px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.viewerState i { font-size: 2rem; color: #fca5a5; }
+
+/* ── JSON panel header ── */
+.jsonPanelHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  background: var(--brand-light);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  row-gap: 0.4rem;
+}
+
+/* On desktop, disable the collapse toggle look */
+@media (min-width: 901px) {
+  .jsonPanelHeader {
+    cursor: default !important;
+  }
+  .jsonChevron {
+    display: none !important;
+  }
+}
+
+.jsonChevron {
+  font-size: 0.75rem;
+  color: var(--brand);
+  opacity: 0.6;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.jsonPanelTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--brand);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.readOnlyBadge {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 4px;
+  padding: 1px 7px;
+}
+
+.bboxBadge {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-family: monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jsonPanelSearch {
+  flex: 1;
+  min-width: 80px;
+  padding: 0.3rem 0.65rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.jsonPanelSearch:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(58, 44, 8, 0.08);
+}
+.jsonPanelSearch::placeholder { color: var(--text-muted); }
+
+.jsonPanelCopyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border: 1.5px solid var(--brand-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--brand);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.jsonPanelCopyBtn:hover {
+  background: #fdf5e4;
+  border-color: var(--brand);
+}
+
+/* Hide "Copy" text on small screens, keep icon */
+@media (max-width: 480px) {
+  .copyBtnText { display: none; }
+}
+
+/* ── JSON body ── */
+.jsonPanelPre {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
+  font-size: 0.72rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  background: var(--bg-page);
+  white-space: pre;
+  word-break: break-all;
+  border: none;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+/* Desktop: fill remaining height */
+@media (min-width: 901px) {
+  .jsonPanelPre {
+    flex: 1;
+    min-height: 0;
+  }
+  /* On desktop, always show — override mobile open/closed */
+  .jsonPanelClosed,
+  .jsonPanelOpen {
+    display: block !important;
+    max-height: none !important;
+  }
+}
+
+/* Mobile: collapsible */
+@media (max-width: 900px) {
+  .jsonPanelClosed {
+    display: none;
+  }
+  .jsonPanelOpen {
+    display: block;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+}
+
+/* Highlight segment */
+.jsonHighlight {
+  display: inline;
+  background-color: rgba(251, 191, 36, 0.18);
+  border-left: 3px solid #f59e0b;
+  padding-left: 6px;
+  margin-left: -9px;
+  color: #78350f;
+  border-radius: 0 3px 3px 0;
+}
+
+/* Nice scrollbar */
+.jsonPanelPre::-webkit-scrollbar { width: 8px; height: 8px; }
+.jsonPanelPre::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.jsonPanelPre::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Locked state ── */
+.lockedState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  background: rgba(248, 250, 252, 0.6);
+  border-radius: var(--radius-sm);
+  margin: 0;
+  border: 1.5px dashed #e2e8f0;
+  padding: 2rem 1rem;
+  min-height: 200px;
+  text-align: center;
+}
+
+.lockedTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.lockedSubtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 320px;
+}
+
+.lockedSubtitle strong { color: #475569; }
+
+/* ── OCR Konva Viewer Toolbar ── */
+.ocrToolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--brand-light);
+  flex-shrink: 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: #c8bfa8 transparent;
+}
+
+.ocrToolbar::-webkit-scrollbar { height: 4px; }
+.ocrToolbar::-webkit-scrollbar-track { background: transparent; }
+.ocrToolbar::-webkit-scrollbar-thumb { background: #c8bfa8; border-radius: 4px; }
+.ocrToolbar::-webkit-scrollbar-thumb:hover { background: #9a8f7a; }
+
+.toolGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.toolBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--brand-light);
+  border: 1.5px solid var(--brand-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--brand);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.toolBtn:hover { background: #fdf5e4; border-color: var(--brand); }
+.toolBtnActive { background: var(--brand) !important; color: #fff !important; border-color: var(--brand) !important; }
+
+.levelBtn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  background: var(--brand-light);
+  border: 1.5px solid var(--brand-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--brand);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.levelBtn:hover { background: #fdf5e4; }
+.levelBtnActive { background: var(--brand) !important; color: #fff !important; border-color: var(--brand) !important; }
+
+.toolBtnDanger {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  background: #fff;
+  border: 1.5px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.toolBtnDanger:hover:not(:disabled) { background: #fee2e2; border-color: #ef4444; }
+.toolBtnDanger:disabled { opacity: 0.4; cursor: not-allowed; }

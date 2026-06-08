@@ -1,0 +1,245 @@
+/* ===== Vishva Setu Annotator Portal — Login Page Styles ===== */
+
+/* ---------- Page Shell ---------- */
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---------- Header ---------- */
+.header {
+  background-color: #3A2C08;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2.5rem;
+  height: 80px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logoImg {
+  width: auto;
+  height: 60px;
+  object-fit: contain;
+  display: block;
+}
+
+.portalTitle {
+  color: #ffffff;
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin: 0;
+  font-family: var(--font-bebas), "Georgia", serif;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- Main Content ---------- */
+.main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 4rem;
+  gap: 20rem;
+}
+
+/* ---------- Illustration ---------- */
+.illustrationWrap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.illustration {
+  width: 480px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* ---------- Login Card ---------- */
+.cardWrap {
+  flex: 0 0 auto;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 2px solid #3A2C08;
+  padding: 3rem 3.5rem;
+  width: 360px;
+  box-shadow:
+    0 8px 32px rgba(58, 44, 8, 0.12),
+    0 2px 8px rgba(58, 44, 8, 0.08);
+  animation: slideIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Form Fields ---------- */
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 1.4rem;
+}
+
+.label {
+  color: #3A2C08;
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  font-family: var(--font-bebas), sans-serif;
+}
+
+.input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 2px solid #3A2C08;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #3A2C08;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: #5c470d;
+  box-shadow: 0 0 0 3px rgba(58, 44, 8, 0.15);
+}
+
+.input::placeholder {
+  color: #b0b8cc;
+}
+
+/* ---------- Error Message ---------- */
+.error {
+  color: #c0392b;
+  font-size: 0.82rem;
+  margin: -0.5rem 0 0.8rem 0;
+  text-align: center;
+}
+
+/* ---------- Login Button ---------- */
+.btnWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.8rem;
+}
+
+.loginBtn {
+  background-color: #3A2C08;
+  color: #ffffff;
+  border: none;
+  padding: 0.6rem 3.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  min-height: 40px;
+}
+
+.loginBtn:hover:not(:disabled) {
+  background-color: #5c470d;
+  box-shadow: 0 4px 14px rgba(58, 44, 8, 0.35);
+  transform: translateY(-1px);
+}
+
+.loginBtn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.loginBtn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+/* ---------- Loading Spinner ---------- */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .main {
+    flex-direction: column;
+    padding: 2rem 1.5rem;
+    gap: 2rem;
+  }
+
+  .illustration {
+    width: 220px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 360px;
+    padding: 2rem 1.8rem;
+  }
+
+  .header {
+    padding: 0 1.2rem;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 70px;
+    gap: 0.5rem;
+    padding-block: 0.75rem;
+  }
+
+  .portalTitle {
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+  }
+}
+
+@media (max-width: 480px) {
+  .portalTitle {
+    font-size: 0.82rem;
+  }
+
+  .logoLine1,
+  .logoLine2 {
+    font-size: 0.44rem;
+  }
+}

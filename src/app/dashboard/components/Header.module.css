@@ -1,0 +1,92 @@
+/* ===== Header — matches login page header exactly ===== */
+
+.header {
+  background-color: #3A2C08;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2.5rem;
+  height: 80px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  z-index: 100;
+  position: sticky;
+  top: 0;
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+}
+
+.logoImg {
+  height: 60px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.portalTitle {
+  color: #ffffff;
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin: 0;
+  font-family: var(--font-bebas), "Georgia", serif;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.greeting {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.greeting strong {
+  color: #ffffff;
+}
+
+.logoutBtn {
+  padding: 0.4rem 1.1rem;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.logoutBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.logoutBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 1.2rem;
+    height: auto;
+    min-height: 70px;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-block: 0.75rem;
+  }
+
+  .portalTitle {
+    font-size: 1rem;
+  }
+}

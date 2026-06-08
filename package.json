@@ -9,9 +9,15 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@indic-transliteration/sanscript": "^1.3.3",
+    "konva": "^10.3.0",
     "next": "16.2.5",
+    "nspell": "^2.1.5",
+    "pdfjs-dist": "^5.7.284",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-konva": "^19.2.4",
+    "use-image": "^1.1.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

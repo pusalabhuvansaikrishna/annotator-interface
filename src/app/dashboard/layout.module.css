@@ -1,0 +1,56 @@
+/* ===== Dashboard Layout ===== */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f5f6fa;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  height: calc(100vh - 80px);
+}
+
+.main {
+  flex: 1;
+  padding: 2.5rem 2rem 4rem;
+  overflow-y: auto;
+}
+
+/* ── Full-screen loading spinner ── */
+.loadingScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f6fa;
+}
+
+.spinner {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(58, 44, 8, 0.2);
+  border-top-color: #3A2C08;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .body {
+    height: calc(100vh - 70px);
+  }
+
+  .main {
+    padding: 1.5rem 1rem 3rem;
+  }
+}
