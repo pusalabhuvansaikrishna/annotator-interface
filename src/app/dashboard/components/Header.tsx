@@ -34,8 +34,8 @@ export default function Header({ annotatorName }: HeaderProps) {
         <Image
           src="/iiit-logo.png"
           alt="IIIT Hyderabad Logo"
-          width={120}
-          height={60}
+          width={237}
+          height={122}
           className={styles.logoImg}
           priority
         />

@@ -30,6 +30,7 @@
 .logoImg {
   width: auto;
   height: 60px;
+  max-width: none;
   object-fit: contain;
   display: block;
 }
@@ -66,6 +67,7 @@
 .illustration {
   width: 480px;
   height: auto;
+  max-width: none;
   object-fit: contain;
   display: block;
 }

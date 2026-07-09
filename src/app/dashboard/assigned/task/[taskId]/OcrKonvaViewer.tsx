@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Konva from "konva";
 import { BASE_URL } from "@/config/api";
+import {SPELLCHECK_URL} from "@/config/api";
 import styles from "./taskDetail.module.css";
 
 
@@ -248,8 +249,11 @@ async function renderPdfPageToCanvas(
 export default function OcrKonvaViewer({
   imageUrl,
   ocrUrl,
-  spellCheckUrl = `${BASE_URL}/annotator/spellcheck`,
-  addWordUrl    = `${BASE_URL}/annotator/spellcheck/word`,
+  // ── Decoupled spell-check service ──
+  // Previously these pointed at BASE_URL + "/annotator/spellcheck[...]".
+  // The spell-check service now lives on its own, addressed via SPELLCHECK_URL.
+  spellCheckUrl = `${SPELLCHECK_URL}/spellcheck`,
+  addWordUrl    = `${SPELLCHECK_URL}/spellcheck/word`,
   onOcrChange,
   onSelectionChange,
   className = "",
@@ -311,6 +315,13 @@ export default function OcrKonvaViewer({
   const [translitEnabled, setTranslitEnabled] = useState(true);
   const [suggestions,     setSuggestions]     = useState<SuggestionState | null>(null);
   const tooltipInputRef                        = useRef<HTMLTextAreaElement>(null);
+
+  // ── Tooltip manual drag offset ──────────────────────────────────────────────
+  // Lets the annotator grab the tooltip's header and drag it anywhere on
+  // screen, in case the auto-computed position still overlaps the word.
+  const [tooltipOffset, setTooltipOffset] = useState({ x: 0, y: 0 });
+  const isDraggingTooltipRef = useRef(false);
+  const tooltipDragStartRef  = useRef({ mouseX: 0, mouseY: 0, offsetX: 0, offsetY: 0 });
 
   const rawWordRef  = useRef("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -648,6 +659,8 @@ export default function OcrKonvaViewer({
     const bboxW = rect.width()  * zoom;
     const bboxH = rect.height() * zoom;
 
+    setTooltipOffset({ x: 0, y: 0 }); // fresh box → start from the auto-computed position
+
     setTooltip({
       id, text,
       rectLeft:   container.offsetLeft + absPos.x,
@@ -673,6 +686,38 @@ export default function OcrKonvaViewer({
     if (spellDebounceRef.current) clearTimeout(spellDebounceRef.current);
     setTooltip(null);
     setTooltipSpellStatus("skip");
+    setTooltipOffset({ x: 0, y: 0 });
+  }, []);
+
+  // ── Tooltip dragging (grab the header, move it anywhere) ──────────────────
+  const handleTooltipDragStart = useCallback((e: React.MouseEvent) => {
+    // Don't start a drag when the mousedown originated on a button inside
+    // the header (close button, IME toggle, etc.) — let those handle clicks.
+    if ((e.target as HTMLElement).closest("button")) return;
+    e.stopPropagation();
+    e.preventDefault();
+    isDraggingTooltipRef.current = true;
+    tooltipDragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      offsetX: tooltipOffset.x,
+      offsetY: tooltipOffset.y,
+    };
+  }, [tooltipOffset]);
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!isDraggingTooltipRef.current) return;
+      const { mouseX, mouseY, offsetX, offsetY } = tooltipDragStartRef.current;
+      setTooltipOffset({ x: offsetX + (e.clientX - mouseX), y: offsetY + (e.clientY - mouseY) });
+    };
+    const handleUp = () => { isDraggingTooltipRef.current = false; };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup",   handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup",   handleUp);
+    };
   }, []);
 
   const select = useCallback((id: string | null) => {
@@ -1342,12 +1387,24 @@ export default function OcrKonvaViewer({
     const wrapperW  = wrapper?.clientWidth  ?? window.innerWidth;
     const spaceBelow = (scrollTop + wrapperH) - tooltip.rectBottom;
     const spaceAbove =  tooltip.rectTop       - scrollTop;
-    const placeAbove = spaceBelow < tooltipH + GAP && spaceAbove > spaceBelow;
-    const top  = placeAbove ? tooltip.rectTop - tooltipH - GAP : tooltip.rectBottom + GAP;
+    // Prefer placing the tooltip ABOVE the selected box (so it never covers
+    // the word the annotator is editing). Only fall back to below when there
+    // truly isn't enough room above but there is below.
+    const fitsAbove  = spaceAbove >= tooltipH + GAP;
+    const fitsBelow  = spaceBelow >= tooltipH + GAP;
+    const placeAbove = fitsAbove || !fitsBelow;
+    let top = placeAbove ? tooltip.rectTop - tooltipH - GAP : tooltip.rectBottom + GAP;
+    // Clamp so the tooltip never gets pushed off the top of the visible area
+    // when there isn't enough room in either direction.
+    top = Math.max(scrollTop + 4, top);
     const left = Math.max(8, Math.min(tooltip.rectLeft, wrapperW - tooltipW - 8));
+    // Manual drag always wins — once the annotator has moved it, respect that.
+    const finalTop  = top  + tooltipOffset.y;
+    const finalLeft = left + tooltipOffset.x;
+    const wasDragged = tooltipOffset.x !== 0 || tooltipOffset.y !== 0;
     return {
-      tooltipStyle: { top: `${top}px`, left: `${left}px`, width: `${tooltipW}px` } as React.CSSProperties,
-      tooltipAbove: placeAbove,
+      tooltipStyle: { top: `${finalTop}px`, left: `${finalLeft}px`, width: `${tooltipW}px` } as React.CSSProperties,
+      tooltipAbove: placeAbove && !wasDragged,
     };
   })();
 
@@ -1587,11 +1644,16 @@ export default function OcrKonvaViewer({
               background: "#1e1e2e", border: "1px solid rgba(255,255,255,0.12)",
               borderRadius: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.45)", overflow: "hidden",
             }}>
-              {/* Header */}
-              <div style={{
-                display: "flex", alignItems: "center", padding: "6px 10px",
-                background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)", gap: 8,
-              }}>
+              {/* Header — drag handle: grab anywhere here (except buttons) to move the tooltip */}
+              <div
+                onMouseDown={handleTooltipDragStart}
+                title="Drag to move"
+                style={{
+                  display: "flex", alignItems: "center", padding: "6px 10px",
+                  background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)", gap: 8,
+                  cursor: "grab", userSelect: "none",
+                }}>
+                <i className="bi bi-grip-vertical" style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", flexShrink: 0 }} />
                 <span style={{
                   fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.5)",
                   letterSpacing: "0.06em", textTransform: "uppercase",
@@ -1641,10 +1703,11 @@ export default function OcrKonvaViewer({
                   </button>
                 )}
 
-                <button onClick={closeTooltip} style={{
+                <button onClick={closeTooltip} onMouseDown={(e) => e.stopPropagation()} style={{
                   background: "none", border: "none", cursor: "pointer",
                   color: "rgba(255,255,255,0.4)", fontSize: 14, lineHeight: 1,
-                  padding: "0 2px", flexShrink: 0, marginLeft: "auto",
+                  padding: "0 2px", flexShrink: 0,
+                  marginLeft: "auto",
                 }} title="Close (Esc)">✕</button>
               </div>
 
@@ -1746,6 +1809,29 @@ export default function OcrKonvaViewer({
                     <span style={{ fontSize: 10, color: "rgba(139,92,246,0.7)" }}>
                       {tooltip.text.length} chars
                     </span>
+
+                    {/* Recenter — only shown once the tooltip has been dragged away
+                        from its auto-computed spot. Placed right next to Confirm so
+                        it's easy to find and use while editing. */}
+                    {(tooltipOffset.x !== 0 || tooltipOffset.y !== 0) && (
+                      <button
+                        onClick={() => setTooltipOffset({ x: 0, y: 0 })}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        title="Snap back to word"
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.35)",
+                          borderRadius: 6, color: "#c4b5fd", cursor: "pointer",
+                          fontSize: 10, fontWeight: 600, fontFamily: "monospace",
+                          padding: "4px 8px", lineHeight: 1, flexShrink: 0,
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        <i className="bi bi-crosshair" style={{ fontSize: 11 }} />
+                        Recenter
+                      </button>
+                    )}
+
                     <button
                       title="Confirm (Ctrl+Enter)"
                       onClick={closeTooltip}
@@ -1762,18 +1848,20 @@ export default function OcrKonvaViewer({
               </div>
             </div>
 
-            {tooltipAbove ? (
-              <div style={{
-                position: "absolute", bottom: -6, left: 14, width: 0, height: 0,
-                borderLeft: "6px solid transparent", borderRight: "6px solid transparent",
-                borderTop: "6px solid #1e1e2e", pointerEvents: "none",
-              }} />
-            ) : (
-              <div style={{
-                position: "absolute", top: -6, left: 14, width: 0, height: 0,
-                borderLeft: "6px solid transparent", borderRight: "6px solid transparent",
-                borderBottom: "6px solid #1e1e2e", pointerEvents: "none",
-              }} />
+            {tooltipOffset.x === 0 && tooltipOffset.y === 0 && (
+              tooltipAbove ? (
+                <div style={{
+                  position: "absolute", bottom: -6, left: 14, width: 0, height: 0,
+                  borderLeft: "6px solid transparent", borderRight: "6px solid transparent",
+                  borderTop: "6px solid #1e1e2e", pointerEvents: "none",
+                }} />
+              ) : (
+                <div style={{
+                  position: "absolute", top: -6, left: 14, width: 0, height: 0,
+                  borderLeft: "6px solid transparent", borderRight: "6px solid transparent",
+                  borderBottom: "6px solid #1e1e2e", pointerEvents: "none",
+                }} />
+              )
             )}
           </div>
         )}

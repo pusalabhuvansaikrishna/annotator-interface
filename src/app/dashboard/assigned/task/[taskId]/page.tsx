@@ -34,8 +34,9 @@ interface TaskDetail {
 type FetchState = "loading" | "success" | "error";
 type TaskStatus = "InReview" | "Completed";
 
-const MAX_REASON          = 1000;
+const MAX_REASON       = 1000;
 const SELECTABLE_STATUSES = ["InReview", "Completed"] as TaskStatus[];
+const JSON_PANEL_WIDTH = 420; // px — fixed width for the sliding JSON drawer
 
 // ── JSON highlight helper ─────────────────────────────────────────────────────
 function buildJsonSegments(
@@ -92,8 +93,13 @@ export default function TaskDetailPage() {
   const [jsonSearch,   setJsonSearch]   = useState("");
   const [jsonCopied,   setJsonCopied]   = useState(false);
 
-  // ── JSON panel collapse on mobile ───────────────────────────────────────────
-  const [jsonPanelOpen, setJsonPanelOpen] = useState(false);
+  // ── JSON sidebar open/closed (slides in from the right edge as an overlay) ──
+  // NOTE: this now only ever changes via the explicit toggle handle button.
+  // Selecting a bbox in the Konva viewer must NOT force this open — it only
+  // updates `selectedBbox` so that, IF the panel happens to already be open,
+  // the corresponding JSON node gets highlighted/scrolled-to.
+  const [jsonSidebarOpen, setJsonSidebarOpen] = useState(false);
+  const viewerRowRef = useRef<HTMLDivElement>(null);
 
   // ── Save state ──────────────────────────────────────────────────────────────
   const [saving,   setSaving]   = useState(false);
@@ -109,16 +115,19 @@ export default function TaskDetailPage() {
   const handleSelectionChange = useCallback((id: string | null) => {
     setSelectedBbox(id);
     setJsonSearch("");
-    // Auto-open JSON panel on mobile when a bbox is selected
-    if (id) setJsonPanelOpen(true);
+    // Intentionally NOT auto-opening the JSON sidebar here anymore.
+    // Live sync (localOcr updates, highlight-on-scroll when panel is open)
+    // keeps working regardless of whether the panel is visible — the panel
+    // itself should only ever open via the toggle handle below.
   }, []);
 
   useEffect(() => {
+    if (!jsonSidebarOpen) return; // no point scrolling a hidden panel
     const el    = highlightRef.current;
     const panel = jsonPanelRef.current;
     if (!el || !panel) return;
     panel.scrollTop = el.offsetTop - panel.clientHeight / 2 + el.offsetHeight / 2;
-  }, [selectedBbox, localOcr]);
+  }, [selectedBbox, localOcr, jsonSidebarOpen]);
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -417,9 +426,18 @@ export default function TaskDetailPage() {
 
           {/* ── Viewer row ── */}
           {isInReview || isCompleted ? (
-            <div className={styles.viewerRow}>
+            <div
+              ref={viewerRowRef}
+              className={styles.viewerRow}
+              style={{
+                position: "relative",
+                width: "100%",
+                display: "flex",
+                justifyContent: "center", // keeps the Konva box centered, always
+              }}
+            >
 
-              {/* LEFT — OCR Konva editor */}
+              {/* CENTER — OCR Konva editor, original size, untouched */}
               <div className={styles.viewerBox}>
                 {task.ocr_url ? (
                   <OcrKonvaViewer
@@ -438,17 +456,64 @@ export default function TaskDetailPage() {
                 )}
               </div>
 
-              {/* RIGHT — Live JSON panel */}
-              <div className={`${styles.viewerBox} ${styles.jsonViewerBox}`}>
+              {/* Toggle handle — fixed to the row's right edge, always visible.
+                  Black border + black arrow so it reads clearly against any background.
+                  This is the ONLY control that opens/closes the JSON drawer. */}
+              <button
+                onClick={() => setJsonSidebarOpen((v) => !v)}
+                title={jsonSidebarOpen ? "Hide JSON panel" : "Show JSON panel"}
+                aria-expanded={jsonSidebarOpen}
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  right: jsonSidebarOpen ? `${JSON_PANEL_WIDTH}px` : 0,
+                  transform: "translateY(-50%)",
+                  transition: "right 0.3s ease",
+                  zIndex: 9999,
+                  width: 28,
+                  height: 56,
+                  borderRadius: "8px 0 0 8px",
+                  border: "2px solid #000",
+                  borderRight: "none",
+                  background: "#fff",
+                  boxShadow: "-1px 1px 4px rgba(0,0,0,0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  padding: 0,
+                  color: "#000",
+                }}
+              >
+                <i
+                  className={`bi bi-chevron-${jsonSidebarOpen ? "right" : "left"}`}
+                  style={{ color: "#000", fontSize: 16 }}
+                />
+              </button>
+
+              {/* RIGHT — Live JSON panel, overlays on top as a drawer.
+                  Does not affect the Konva box's size or position at all. */}
+              <div
+                className={`${styles.viewerBox} ${styles.jsonViewerBox}`}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  height: "100%",
+                  width: `${JSON_PANEL_WIDTH}px`,
+                  boxSizing: "border-box",
+                  transform: jsonSidebarOpen ? "translateX(0)" : "translateX(100%)",
+                  transition: "transform 0.3s ease",
+                  zIndex: 50,
+                  display: "flex",
+                  flexDirection: "column",
+                  background: "#fff",
+                  boxShadow: "-2px 0 12px rgba(0,0,0,0.12)",
+                }}
+              >
 
                 {/* JSON header */}
-                <div
-                  className={styles.jsonPanelHeader}
-                  onClick={() => setJsonPanelOpen((v) => !v)}
-                  role="button"
-                  aria-expanded={jsonPanelOpen}
-                  style={{ cursor: "pointer" }}
-                >
+                <div className={styles.jsonPanelHeader}>
                   <span className={styles.jsonPanelTitle}>
                     <i className="bi bi-braces" /> Live OCR JSON
                     {isCompleted && (
@@ -465,7 +530,6 @@ export default function TaskDetailPage() {
                       className={styles.jsonPanelSearch}
                       placeholder="Filter lines…"
                       value={jsonSearch}
-                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => setJsonSearch(e.target.value)}
                     />
                   )}
@@ -473,7 +537,7 @@ export default function TaskDetailPage() {
                   {!isCompleted && (
                     <button
                       className={styles.jsonPanelCopyBtn}
-                      onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+                      onClick={handleCopy}
                       title="Copy full JSON to clipboard"
                     >
                       {jsonCopied
@@ -481,16 +545,15 @@ export default function TaskDetailPage() {
                         : <><i className="bi bi-clipboard" /><span className={styles.copyBtnText}>Copy</span></>}
                     </button>
                   )}
-
-                  {/* Mobile collapse chevron */}
-                  <i className={`bi bi-chevron-${jsonPanelOpen ? "up" : "down"} ${styles.jsonChevron}`} />
                 </div>
 
                 {/* JSON body */}
                 <div
                   ref={jsonPanelRef}
-                  className={`${styles.jsonPanelPre} ${jsonPanelOpen ? styles.jsonPanelOpen : styles.jsonPanelClosed}`}
+                  className={styles.jsonPanelPre}
                   style={{
+                    flex: 1,
+                    overflow: "auto",
                     userSelect:    isCompleted ? "none"  : "text",
                     pointerEvents: isCompleted ? "none"  : "auto",
                     opacity:       isCompleted ? 0.75    : 1,
